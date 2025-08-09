@@ -19,6 +19,34 @@ import UniformTypeIdentifiers
 
 public struct URLValidator {
     
+    // MARK: - File Extension Constants
+    
+    /// Audio file extensions that may not be recognized by UTType
+    /// These are formats commonly used but not always properly detected by the system
+    private static let audioExtensions: Set<String> = [
+        // Open formats
+        "ogg", "oga", "opus",
+        // Lossless formats
+        "ape", "wv", "tta",
+        // Theater/streaming formats
+        "dts", "ac3", "eac3",
+        // Flash audio
+        "f4a"
+    ]
+    
+    /// Video file extensions that may not be recognized by UTType
+    /// These are formats commonly used but not always properly detected by the system
+    private static let videoExtensions: Set<String> = [
+        // Container formats
+        "mkv", "webm",
+        // Legacy formats
+        "flv", "vob", "ogv",
+        // Camera formats
+        "m2ts", "mts",
+        // Flash video
+        "f4v", "f4p"
+    ]
+    
     // MARK: - Platform Patterns
     
     /// Platform detection patterns using modern Swift
@@ -701,9 +729,21 @@ public struct URLValidator {
         }
     }
     
-    /// Detects the media type from a URL's file extension using UTType
+    /// Detects the media type from a URL's file extension using UTType and manual fallbacks
+    ///
+    /// This method first checks against known problematic extensions that UTType may not recognize,
+    /// then falls back to UTType for standard format detection.
+    ///
     /// - Parameter urlString: The URL string to analyze
-    /// - Returns: The detected media type
+    /// - Returns: The detected media type (.image, .video, .audio, etc.) or .unknown if unrecognized
+    ///
+    /// - Note: The method normalizes the URL before processing and handles URLs without schemes
+    ///
+    /// Example:
+    /// ```swift
+    /// let mediaType = URLValidator.detectMediaType(from: "example.com/video.mkv")
+    /// // Returns: .video
+    /// ```
     public static func detectMediaType(from urlString: String) -> MediaType {
         // Normalize the URL first
         let normalized = normalize(urlString)
@@ -713,27 +753,23 @@ public struct URLValidator {
         let pathExtension = url.pathExtension.lowercased()
         guard !pathExtension.isEmpty else { return .unknown }
         
-        // Manual handling for ambiguous extensions
-        // OGG can be audio (Vorbis) or video (Theora), but most commonly audio
-        let audioExtensions = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "oga", "opus", "wma", "aiff", "aif", "aifc", "amr", "au", "caf", "m4b", "m4p", "m4r", "mid", "midi", "mka", "mp2", "mpa", "ra", "ram"]
-        
+        // Check manual lists first for known problematic formats
+        // Using Set for O(1) lookup performance
         if audioExtensions.contains(pathExtension) {
             return .audio
         }
-        
-        // Video extensions (OGV is video variant of OGG)
-        let videoExtensions = ["mkv", "webm", "flv", "vob", "ogv", "drc", "mng", "avi", "mov", "qt", "wmv", "yuv", "rm", "rmvb", "asf", "amv", "mp4", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m2v", "svi", "3gp", "3g2", "mxf", "roq", "nsv", "f4v", "f4p", "f4a", "f4b"]
         
         if videoExtensions.contains(pathExtension) {
             return .video
         }
         
-        // Use UTType for detection
+        // Use UTType for standard format detection
+        // This handles most common formats that are properly registered with the system
         guard let utType = UTType(filenameExtension: pathExtension) else {
             return .unknown
         }
         
-        // Check conformance to various types
+        // Check conformance to various types in order of likelihood
         if utType.conforms(to: .image) { return .image }
         if utType.conforms(to: .movie) || utType.conforms(to: .video) { return .video }
         if utType.conforms(to: .audio) { return .audio }
