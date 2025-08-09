@@ -162,6 +162,8 @@ public enum Platform: String, CaseIterable, Sendable {
     case wellfound = "Wellfound"
     case glitch = "Glitch"
     case kaggle = "Kaggle"
+    case vercel = "Vercel"
+    case netlify = "Netlify"
     
     // MARK: E-commerce
     case amazon = "Amazon"
@@ -198,19 +200,38 @@ public enum Platform: String, CaseIterable, Sendable {
     case nintendo = "Nintendo"
     
     // MARK: Financial/Crypto
+
+    // Payment Processors
     case paypal = "PayPal"
     case venmo = "Venmo"
     case cashapp = "Cash App"
     case zelle = "Zelle"
     case stripe = "Stripe"
     case square = "Square"
+    case alipay = "Alipay"
+    case paytm = "Paytm"
+
+    // Buy Now, Pay Later
+    case klarna = "Klarna"
+    case afterpay = "Afterpay"
+    case affirm = "Affirm"
+
+    // Digital Banking
+    case chime = "Chime"
+    case revolut = "Revolut"
+    case wise = "Wise"
+
+    // Trading/Investment
+    case robinhood = "Robinhood"
+    case etoro = "eToro"
+    case webull = "Webull"
+
+    // Crypto
     case coinbase = "Coinbase"
     case binance = "Binance"
     case kraken = "Kraken"
-    case robinhood = "Robinhood"
-    case etoro = "eToro"
-    case revolut = "Revolut"
-    case wise = "Wise"
+    case metamask = "MetaMask"
+    case cryptoDotCom = "Crypto.com"
     
     // MARK: Dating Platforms
     case tinder = "Tinder"

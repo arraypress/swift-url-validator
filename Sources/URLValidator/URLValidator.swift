@@ -13,10 +13,7 @@
 import Foundation
 import UniformTypeIdentifiers
 
-// MARK: - URLValidator
-
 /// A comprehensive URL validator that detects platforms, media types, and validates URLs
-
 public struct URLValidator {
     
     // MARK: - File Extension Constants
@@ -202,6 +199,8 @@ public struct URLValidator {
         patterns[.wellfound] = ["wellfound.com"]
         patterns[.glitch] = ["glitch.com", "glitch.me"]
         patterns[.kaggle] = ["kaggle.com"]
+        patterns[.vercel] = ["vercel.com", "vercel.app"]
+        patterns[.netlify] = ["netlify.com", "netlify.app"]
         
         // E-commerce
         patterns[.amazon] = ["amazon.com", "amazon.co.uk", "amazon.de", "amazon.fr", "amazon.it", "amazon.es", "amazon.ca", "amazon.in", "amazon.co.jp", "amzn.to", "amzn.eu"]
@@ -244,13 +243,22 @@ public struct URLValidator {
         patterns[.zelle] = ["zellepay.com"]
         patterns[.stripe] = ["stripe.com"]
         patterns[.square] = ["square.com", "squareup.com"]
+        patterns[.alipay] = ["alipay.com", "intl.alipay.com"]
+        patterns[.paytm] = ["paytm.com"]
+        patterns[.klarna] = ["klarna.com"]
+        patterns[.afterpay] = ["afterpay.com"]
+        patterns[.affirm] = ["affirm.com"]
+        patterns[.chime] = ["chime.com"]
+        patterns[.revolut] = ["revolut.com"]
+        patterns[.wise] = ["wise.com", "transferwise.com"]
+        patterns[.robinhood] = ["robinhood.com"]
+        patterns[.etoro] = ["etoro.com"]
+        patterns[.webull] = ["webull.com"]
         patterns[.coinbase] = ["coinbase.com"]
         patterns[.binance] = ["binance.com", "binance.us"]
         patterns[.kraken] = ["kraken.com"]
-        patterns[.robinhood] = ["robinhood.com"]
-        patterns[.etoro] = ["etoro.com"]
-        patterns[.revolut] = ["revolut.com"]
-        patterns[.wise] = ["wise.com", "transferwise.com"]
+        patterns[.metamask] = ["metamask.io"]
+        patterns[.cryptoDotCom] = ["crypto.com"]
         
         // Dating
         patterns[.tinder] = ["tinder.com", "gotinder.com"]
@@ -388,6 +396,123 @@ public struct URLValidator {
         return patterns
     }()
     
+    /// Special subdomain checks that must be evaluated before general domain patterns
+    private static let specialSubdomainChecks: [(domain: String, platform: Platform)] = [
+        // YouTube family
+        ("music.youtube.com", .youtubeMusic),
+        ("studio.youtube.com", .youtubeStudio),
+        ("gaming.youtube.com", .youtubeGaming),
+        
+        // Amazon variants
+        ("music.amazon.com", .amazonMusic),
+        ("music.amazon.co.uk", .amazonMusic),
+        ("music.amazon.de", .amazonMusic),
+        ("music.amazon.fr", .amazonMusic),
+        ("music.amazon.it", .amazonMusic),
+        ("music.amazon.es", .amazonMusic),
+        ("music.amazon.ca", .amazonMusic),
+        ("music.amazon.co.jp", .amazonMusic),
+        
+        // Learning platforms
+        ("learning.linkedin.com", .linkedinLearning),
+        
+        // Facebook variants
+        ("business.facebook.com", .facebook),
+        ("developers.facebook.com", .facebook),
+        ("gaming.fb.com", .facebookGaming),
+        ("fb.gg", .facebookGaming),
+        
+        // Google services
+        ("meet.google.com", .googleMeet),
+        ("drive.google.com", .googleDrive),
+        ("docs.google.com", .googleDrive),
+        ("sheets.google.com", .googleDrive),
+        ("slides.google.com", .googleDrive),
+        ("forms.google.com", .googleDrive),
+        ("sites.google.com", .googleDrive),
+        ("maps.google.com", .googleMaps),
+        ("podcasts.google.com", .googlePodcasts),
+        
+        // Microsoft services
+        ("teams.microsoft.com", .teams),
+        ("teams.live.com", .teams),
+        ("onedrive.live.com", .onedrive),
+        
+        // Apple services
+        ("podcasts.apple.com", .applePodcasts),
+        ("music.apple.com", .appleMusic),
+        ("maps.apple.com", .appleMaps),
+        ("itunes.apple.com", .appleMusic), // Legacy but still used
+        
+        // Spotify variants
+        ("open.spotify.com", .spotify),
+        ("play.spotify.com", .spotify),
+        ("podcasters.spotify.com", .podcastsSpotify),
+        
+        // Twitch variants
+        ("clips.twitch.tv", .twitch),
+        ("m.twitch.tv", .twitch),
+        ("player.twitch.tv", .twitch),
+        
+        // GitHub variants
+        ("gist.github.com", .github),
+        ("raw.githubusercontent.com", .github),
+        
+        // WeChat/QQ
+        ("weixin.qq.com", .wechat),
+        ("im.qq.com", .qq),
+        
+        // Reddit variants
+        ("old.reddit.com", .reddit),
+        ("np.reddit.com", .reddit),
+        ("i.reddit.com", .reddit),
+        
+        // SoundCloud variants
+        ("on.soundcloud.com", .soundcloud),
+        ("m.soundcloud.com", .soundcloud),
+        
+        // Other platforms
+        ("player.vimeo.com", .vimeo),
+        ("app.slack.com", .slack),
+        ("web.whatsapp.com", .whatsapp),
+        ("chat.whatsapp.com", .whatsapp),
+        ("api.whatsapp.com", .whatsapp),
+        ("app.element.io", .element),
+        ("warpcast.com", .farcaster),
+        ("intl.alipay.com", .alipay),
+        ("binance.us", .binance),
+        ("app.box.com", .box)
+    ]
+    
+    /// Platforms that should be skipped in the main pattern loop (handled by special checks)
+    private static let skipPlatforms: Set<Platform> = [
+        .youtubeMusic, .youtubeStudio, .youtubeGaming,
+        .linkedinLearning, .wechat, .amazonMusic, .podcastsSpotify,
+        .facebookGaming, .googleMeet, .googleDrive, .googleMaps, .googlePodcasts,
+        .teams, .applePodcasts, .appleMusic, .appleMaps
+    ]
+    
+    /// Platforms that use custom subdomains (*.platform.com pattern)
+    private static let customSubdomainPatterns: [(Platform, String)] = [
+        (.bandcamp, "bandcamp.com"),
+        (.shopify, ".myshopify.com"),
+        (.podbean, ".podbean.com"),
+        (.buzzsprout, ".buzzsprout.com"),
+        (.substack, ".substack.com"),
+        (.medium, ".medium.com"),
+        (.wordpress, ".wordpress.com"),
+        (.blogger, ".blogspot.com"),
+        (.ghost, ".ghost.io"),
+        (.notion, ".notion.site"),
+        (.jira, ".atlassian.net"),
+        (.carrd, ".carrd.co"),
+        (.hashnode, ".hashnode.dev"),
+        (.vercel, ".vercel.app"),  // If you add Vercel
+        (.netlify, ".netlify.app"), // If you add Netlify
+        (.github, ".github.io"),     // GitHub Pages
+        (.gitlab, ".gitlab.io")      // GitLab Pages
+    ]
+    
     // MARK: - Initialization
     
     /// Private initializer to prevent instantiation
@@ -404,41 +529,59 @@ public struct URLValidator {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         
-        // Check for obvious non-URLs
-        if trimmed == "not a url" || trimmed == "just some text" {
+        // Check for email-like patterns (contains @ but no scheme)
+        if trimmed.contains("@") && !trimmed.contains("://") {
             return false
         }
         
-        // Check for email-like patterns without proper domain
-        if trimmed.contains("@") && !trimmed.contains("://") {
-            // This might be an email, check if it has a valid domain
-            if !trimmed.contains(".") || trimmed.hasSuffix("@example") {
-                return false
-            }
-        }
-        
-        // Special handling for scheme-only URLs
+        // Check for malformed scheme (starts with ://)
         if trimmed.hasPrefix("://") {
             return false
         }
         
-        // Single word without dots (except localhost)
-        if !trimmed.contains(".") && !trimmed.contains("://") && trimmed != "localhost" && !trimmed.hasPrefix("localhost:") {
-            return false
+        // Check for scheme without host (like http://:8080)
+        // But allow file:// URLs which don't have traditional hosts
+        if trimmed.contains("://") && !trimmed.hasPrefix("file://") {
+            let parts = trimmed.components(separatedBy: "://")
+            if parts.count == 2 {
+                let afterScheme = parts[1]
+                // Check if it starts with : (port) without a host
+                if afterScheme.hasPrefix(":") {
+                    return false
+                }
+                // Check if it's empty or only has a path
+                if afterScheme.isEmpty || afterScheme.hasPrefix("/") {
+                    return false
+                }
+            }
+        }
+        
+        // Single word without dots or scheme (except localhost)
+        if !trimmed.contains(".") && !trimmed.contains("://") {
+            // Allow localhost and localhost with port
+            if trimmed != "localhost" && !trimmed.hasPrefix("localhost:") {
+                return false
+            }
         }
         
         // First try as-is
         if let url = URL(string: trimmed) {
             // If it has a scheme, validate normally
             if let scheme = url.scheme {
+                // Special handling for file URLs
+                if scheme == "file" {
+                    // File URLs are valid if they can be created
+                    return true
+                }
                 // For HTTP(S) URLs, ensure there's a host
                 if scheme == "http" || scheme == "https" {
-                    return url.host != nil
+                    return url.host != nil && !url.host!.isEmpty
                 }
                 // For other schemes with "://", ensure there's content after
                 if trimmed.contains("://") {
                     let afterScheme = trimmed.components(separatedBy: "://").last ?? ""
-                    return !afterScheme.isEmpty
+                    // Allow if there's content and it's not just a port
+                    return !afterScheme.isEmpty && !afterScheme.hasPrefix(":")
                 }
                 return true
             }
@@ -482,7 +625,6 @@ public struct URLValidator {
     /// - Parameter urlString: The URL string to analyze
     /// - Returns: The detected platform or .unknown
     public static func detectPlatform(from urlString: String) -> Platform {
-        // Normalize the URL first
         let normalized = normalize(urlString)
         
         guard let url = URL(string: normalized),
@@ -490,50 +632,28 @@ public struct URLValidator {
             return .unknown
         }
         
-        // Clean host (remove www. prefix)
         let cleanHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
         let path = url.path.lowercased()
         
-        // IMPORTANT: Check specific subdomains FIRST before general domains
+        // Check special subdomains first
+        for (domain, platform) in specialSubdomainChecks {
+            if cleanHost == domain {
+                return platform
+            }
+        }
         
-        // YouTube family
-        if cleanHost == "music.youtube.com" {
-            return .youtubeMusic
-        }
-        if cleanHost == "studio.youtube.com" {
-            return .youtubeStudio
-        }
-        if cleanHost == "gaming.youtube.com" {
-            return .youtubeGaming
-        }
+        // Path-based special cases
         if (cleanHost == "youtube.com" || cleanHost == "m.youtube.com") && path.contains("/shorts/") {
             return .youtubeShorts
         }
         
-        // Amazon Music - CHECK BEFORE general Amazon
-        if cleanHost == "music.amazon.com" || cleanHost == "music.amazon.co.uk" || cleanHost == "music.amazon.de" {
-            return .amazonMusic
-        }
-        
-        // LinkedIn Learning
-        if cleanHost == "learning.linkedin.com" {
-            return .linkedinLearning
-        }
-        
-        // Instagram Reels
         if (cleanHost == "instagram.com" || cleanHost == "instagr.am") && path.contains("/reel/") {
             return .instagramReels
         }
         
-        // WeChat specific domain
-        if cleanHost == "weixin.qq.com" {
-            return .wechat
-        }
-        
         // Check against platform patterns
         for (platform, domains) in platformPatterns {
-            // Skip the ones we already checked above
-            if [.youtubeMusic, .youtubeStudio, .youtubeGaming, .linkedinLearning, .wechat, .amazonMusic].contains(platform) {
+            if skipPlatforms.contains(platform) {
                 continue
             }
             
@@ -542,65 +662,16 @@ public struct URLValidator {
                     return platform
                 }
             }
-            
-            // Special handling for subdomains
-            if handleSubdomainPlatform(platform: platform, host: cleanHost) {
+        }
+        
+        // Check custom subdomain patterns
+        for (platform, pattern) in customSubdomainPatterns {
+            if cleanHost.contains(pattern) {
                 return platform
             }
         }
         
         return .unknown
-    }
-    
-    // Helper method for subdomain handling
-    private static func handleSubdomainPlatform(platform: Platform, host: String) -> Bool {
-        switch platform {
-        case .bandcamp:
-            return host.contains("bandcamp.com")
-        case .shopify:
-            return host.contains(".myshopify.com")
-        case .podbean:
-            return host.contains(".podbean.com")
-        case .buzzsprout:
-            return host.contains(".buzzsprout.com")
-        case .substack:
-            return host.contains(".substack.com")
-        case .medium:
-            return host.contains(".medium.com")
-        case .wordpress:
-            return host.contains(".wordpress.com")
-        case .blogger:
-            return host.contains(".blogspot.com")
-        case .ghost:
-            return host.contains(".ghost.io")
-        case .notion:
-            return host.contains(".notion.site")
-        case .jira:
-            return host.contains(".atlassian.net")
-        default:
-            return false
-        }
-    }
-    
-    private static func isDatingPlatform(_ platform: Platform) -> Bool {
-        switch platform {
-        case .tinder, .bumble, .hinge, .match, .okcupid, .plentyoffish, .eharmony,
-                .coffeeMeetsBagel, .happn, .badoo, .grindr, .her, .feeld:
-            return true
-        default:
-            return false
-        }
-    }
-    
-    private static func isGamingPlatform(_ platform: Platform) -> Bool {
-        switch platform {
-        case .steam, .epicGames, .battlenet, .origin, .uplay, .gog, .itchIo,
-                .roblox, .minecraft, .fortnite, .leagueOfLegends, .valorant,
-                .xbox, .playstation, .nintendo:
-            return true
-        default:
-            return false
-        }
     }
     
     /// Gets the category for a platform using modern Swift patterns
@@ -656,7 +727,7 @@ public struct URLValidator {
             // Developer
         case .github, .gitlab, .bitbucket, .stackoverflow, .codepen, .codesandbox, .replit,
                 .figma, .dribbble, .behance, .angellist, .producthunt, .polywork, .wellfound,
-                .glitch, .kaggle:
+                .glitch, .kaggle, .vercel, .netlify:
             return .developer
             
             // E-commerce
@@ -669,9 +740,10 @@ public struct URLValidator {
                 .fortnite, .leagueOfLegends, .valorant, .xbox, .playstation, .nintendo:
             return .gaming
             
-            // Financial
+            // Financial (UPDATED with new platforms)
         case .paypal, .venmo, .cashapp, .zelle, .stripe, .square, .coinbase, .binance, .kraken,
-                .robinhood, .etoro, .revolut, .wise:
+                .robinhood, .etoro, .revolut, .wise, .klarna, .afterpay, .affirm, .chime,
+                .metamask, .cryptoDotCom, .webull, .alipay, .paytm:
             return .financial
             
             // Dating
@@ -845,7 +917,26 @@ public struct URLValidator {
     
     // MARK: - Private Methods
     
-    /// Extracts special IDs from URLs using modern Swift patterns
+    /// Main ID extraction method that delegates to platform-specific extractors
+    /// - Parameters:
+    ///   - url: The URL to analyze
+    ///   - platform: The detected platform
+    /// - Returns: Dictionary of extracted IDs with descriptive keys
+    ///
+    /// Supported platforms:
+    /// - YouTube (video IDs)
+    /// - Twitter/X (tweet IDs)
+    /// - Instagram (post IDs)
+    /// - TikTok (video IDs)
+    /// - Spotify (track/album/playlist IDs)
+    /// - Reddit (post IDs)
+    /// - GitHub (owner/repo/PR/issue)
+    /// - LinkedIn (activity IDs)
+    /// - Vimeo (video IDs)
+    /// - Facebook (post/video IDs)
+    /// - Twitch (clip IDs)
+    /// - SoundCloud (artist/track)
+    /// - Medium (user/article IDs)
     private static func extractIDs(from url: URL, platform: Platform) -> [String: String] {
         var ids: [String: String] = [:]
         let path = url.path
@@ -885,6 +976,33 @@ public struct URLValidator {
             let githubIDs = extractGitHubIDs(from: path)
             ids.merge(githubIDs) { _, new in new }
             
+        case .linkedin:
+            if let activityID = extractLinkedInID(from: path) {
+                ids["linkedin_activity_id"] = activityID
+            }
+            
+        case .vimeo:
+            if let videoID = extractVimeoID(from: path) {
+                ids["vimeo_video_id"] = videoID
+            }
+            
+        case .facebook:
+            let facebookIDs = extractFacebookIDs(from: url)
+            ids.merge(facebookIDs) { _, new in new }
+            
+        case .twitch:
+            if let clipID = extractTwitchClipID(from: url, host: host) {
+                ids["twitch_clip_id"] = clipID
+            }
+            
+        case .soundcloud:
+            let soundcloudIDs = extractSoundCloudIDs(from: path)
+            ids.merge(soundcloudIDs) { _, new in new }
+            
+        case .medium:
+            let mediumIDs = extractMediumIDs(from: path)
+            ids.merge(mediumIDs) { _, new in new }
+            
         default:
             break
         }
@@ -892,6 +1010,171 @@ public struct URLValidator {
         return ids
     }
     
+    /// Extracts LinkedIn activity ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The LinkedIn activity ID if found, nil otherwise
+    ///
+    /// Example:
+    /// - Input: "/posts/username_activity-7123456789"
+    /// - Output: "7123456789"
+    private static func extractLinkedInID(from path: String) -> String? {
+        guard path.contains("/posts/") else { return nil }
+        
+        let components = path.split(separator: "/")
+        guard let postsIndex = components.firstIndex(of: "posts"),
+              postsIndex + 1 < components.count else { return nil }
+        
+        let postPart = String(components[postsIndex + 1])
+        return postPart.split(separator: "-").last.map(String.init)
+    }
+    
+    /// Extracts Vimeo video ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The Vimeo video ID if found, nil otherwise
+    ///
+    /// Example:
+    /// - Input: "/123456789"
+    /// - Output: "123456789"
+    private static func extractVimeoID(from path: String) -> String? {
+        let components = path.split(separator: "/")
+        guard let videoID = components.last,
+              videoID.allSatisfy({ $0.isNumber }) else { return nil }
+        return String(videoID)
+    }
+    
+    /// Extracts Facebook post and video IDs from a URL
+    /// - Parameter url: The URL to analyze
+    /// - Returns: Dictionary containing facebook_post_id and/or facebook_video_id
+    ///
+    /// Examples:
+    /// - Post: "facebook.com/username/posts/123456789" → ["facebook_post_id": "123456789"]
+    /// - Video: "facebook.com/watch/?v=987654321" → ["facebook_video_id": "987654321"]
+    private static func extractFacebookIDs(from url: URL) -> [String: String] {
+        var ids: [String: String] = [:]
+        let path = url.path
+        
+        // Facebook post: facebook.com/username/posts/123456789
+        if path.contains("/posts/") {
+            let components = path.split(separator: "/")
+            if let postsIndex = components.firstIndex(of: "posts"),
+               postsIndex + 1 < components.count {
+                ids["facebook_post_id"] = String(components[postsIndex + 1])
+            }
+        }
+        
+        // Facebook video: facebook.com/watch/?v=123456789
+        if let query = url.query {
+            let params = query.split(separator: "&")
+            for param in params {
+                let parts = param.split(separator: "=", maxSplits: 1)
+                if parts.count == 2 && parts[0] == "v" {
+                    ids["facebook_video_id"] = String(parts[1])
+                    break
+                }
+            }
+        }
+        
+        return ids
+    }
+    
+    /// Extracts Twitch clip ID from a URL
+    /// - Parameters:
+    ///   - url: The URL to analyze
+    ///   - host: The lowercase host of the URL
+    /// - Returns: The Twitch clip ID if found, nil otherwise
+    ///
+    /// Examples:
+    /// - Direct: "clips.twitch.tv/ClipName" → "ClipName"
+    /// - Channel: "twitch.tv/username/clip/ClipName" → "ClipName"
+    private static func extractTwitchClipID(from url: URL, host: String) -> String? {
+        let path = url.path
+        
+        // Twitch clip: clips.twitch.tv/ClipName
+        if host == "clips.twitch.tv" {
+            let clipID = path.dropFirst() // Remove leading /
+            return clipID.isEmpty ? nil : String(clipID)
+        }
+        
+        // Or: twitch.tv/username/clip/ClipName
+        if path.contains("/clip/") {
+            let components = path.split(separator: "/")
+            if let clipIndex = components.firstIndex(of: "clip"),
+               clipIndex + 1 < components.count {
+                return String(components[clipIndex + 1])
+            }
+        }
+        
+        return nil
+    }
+    
+    /// Extracts SoundCloud artist and track information from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: Dictionary containing soundcloud_artist and soundcloud_track if found
+    ///
+    /// Example:
+    /// - Input: "/artist-name/track-name"
+    /// - Output: ["soundcloud_artist": "artist-name", "soundcloud_track": "track-name"]
+    private static func extractSoundCloudIDs(from path: String) -> [String: String] {
+        var ids: [String: String] = [:]
+        
+        // SoundCloud track: soundcloud.com/artist/track-name
+        let components = path.split(separator: "/").filter { !$0.isEmpty }
+        if components.count >= 2 {
+            ids["soundcloud_artist"] = String(components[0])
+            ids["soundcloud_track"] = String(components[1])
+        }
+        
+        return ids
+    }
+    
+    /// Extracts Medium user and article IDs from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: Dictionary containing medium_user and/or medium_article_id
+    ///
+    /// Example:
+    /// - Input: "/@username/article-title-abc123def456"
+    /// - Output: ["medium_user": "username", "medium_article_id": "abc123def456"]
+    ///
+    /// - Note: Medium article IDs are typically 12+ characters and appear after the last dash in the URL
+    private static func extractMediumIDs(from path: String) -> [String: String] {
+        var ids: [String: String] = [:]
+        
+        // Medium article: medium.com/@username/article-title-abc123
+        guard path.contains("@") else { return ids }
+        
+        let components = path.split(separator: "/")
+        
+        // Extract username
+        if let userComponent = components.first(where: { $0.hasPrefix("@") }) {
+            ids["medium_user"] = String(userComponent.dropFirst()) // Remove @
+        }
+        
+        // Extract article ID (last component often has article ID at the end)
+        if let lastComponent = components.last,
+           let dashIndex = lastComponent.lastIndex(of: "-") {
+            let articleID = lastComponent[lastComponent.index(after: dashIndex)...]
+            if articleID.count > 10 { // Medium IDs are usually long
+                ids["medium_article_id"] = String(articleID)
+            }
+        }
+        
+        return ids
+    }
+    
+    /// Extracts YouTube video ID from various YouTube URL formats
+    /// - Parameters:
+    ///   - url: The URL to analyze
+    ///   - host: The lowercase host of the URL
+    /// - Returns: The YouTube video ID if found, nil otherwise
+    ///
+    /// Supported formats:
+    /// - youtu.be/VIDEO_ID (shortened URLs)
+    /// - youtube.com/watch?v=VIDEO_ID (standard watch URLs)
+    /// - youtube.com/shorts/VIDEO_ID (YouTube Shorts)
+    ///
+    /// Example:
+    /// - Input: "https://youtu.be/dQw4w9WgXcQ"
+    /// - Output: "dQw4w9WgXcQ"
     private static func extractYouTubeVideoID(from url: URL, host: String) -> String? {
         if host == "youtu.be" {
             // Format: youtu.be/VIDEO_ID
@@ -917,6 +1200,15 @@ public struct URLValidator {
         return nil
     }
     
+    /// Extracts Twitter/X tweet ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The tweet ID if found, nil otherwise
+    ///
+    /// Example:
+    /// - Input: "/elonmusk/status/1234567890123456789"
+    /// - Output: "1234567890123456789"
+    ///
+    /// - Note: Works for both twitter.com and x.com domains
     private static func extractTwitterID(from path: String) -> String? {
         let components = path.split(separator: "/")
         if let statusIndex = components.firstIndex(of: "status"),
@@ -926,6 +1218,17 @@ public struct URLValidator {
         return nil
     }
     
+    /// Extracts Instagram post or reel ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The Instagram post/reel ID if found, nil otherwise
+    ///
+    /// Supported formats:
+    /// - instagram.com/p/POST_ID (posts)
+    /// - instagram.com/reel/REEL_ID (reels)
+    ///
+    /// Example:
+    /// - Input: "/p/CyTPsXYMzTj/"
+    /// - Output: "CyTPsXYMzTj"
     private static func extractInstagramID(from path: String) -> String? {
         let components = path.split(separator: "/")
         if let postIndex = components.firstIndex(where: { $0 == "p" || $0 == "reel" }),
@@ -935,15 +1238,43 @@ public struct URLValidator {
         return nil
     }
     
+    /// Extracts TikTok video ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The TikTok video ID if found, nil otherwise
+    ///
+    /// Example:
+    /// - Input: "/@username/video/7156932021247864110"
+    /// - Output: "7156932021247864110"
+    ///
+    /// - Note: TikTok video IDs are typically long numeric strings
     private static func extractTikTokID(from path: String) -> String? {
-        let components = path.split(separator: "/")
-        if let videoIndex = components.firstIndex(of: "video"),
-           videoIndex + 1 < components.count {
-            return String(components[videoIndex + 1])
+        if let range = path.range(of: "/video/", options: .caseInsensitive) {
+            let afterVideo = String(path[range.upperBound...])
+            let id = afterVideo
+                .components(separatedBy: "/")[0]
+                .components(separatedBy: "?")[0]
+                .components(separatedBy: "#")[0]
+            
+            return id.isEmpty ? nil : id
         }
         return nil
     }
     
+    /// Extracts Spotify content IDs from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: Dictionary containing the Spotify content type and ID
+    ///
+    /// Supported content types:
+    /// - track (songs)
+    /// - album (albums)
+    /// - playlist (playlists)
+    /// - episode (podcast episodes)
+    /// - show (podcasts)
+    /// - artist (artist profiles)
+    ///
+    /// Example:
+    /// - Input: "/track/4cOdK2wGLETKBW3PvgPWqT"
+    /// - Output: ["spotify_track_id": "4cOdK2wGLETKBW3PvgPWqT"]
     private static func extractSpotifyIDs(from path: String) -> [String: String] {
         var ids: [String: String] = [:]
         let components = path.split(separator: "/")
@@ -957,6 +1288,15 @@ public struct URLValidator {
         return ids
     }
     
+    /// Extracts Reddit post ID from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: The Reddit post ID if found, nil otherwise
+    ///
+    /// Example:
+    /// - Input: "/r/swift/comments/abc123/post_title_here/"
+    /// - Output: "abc123"
+    ///
+    /// - Note: Reddit post IDs are typically 5-7 character alphanumeric strings
     private static func extractRedditID(from path: String) -> String? {
         let components = path.split(separator: "/")
         if let commentsIndex = components.firstIndex(of: "comments"),
@@ -966,6 +1306,18 @@ public struct URLValidator {
         return nil
     }
     
+    /// Extracts GitHub repository and issue/PR information from a URL path
+    /// - Parameter path: The URL path to analyze
+    /// - Returns: Dictionary containing github_owner, github_repo, and optionally github_pr_number or github_issue_number
+    ///
+    /// Supported formats:
+    /// - github.com/owner/repo (repository)
+    /// - github.com/owner/repo/pull/123 (pull request)
+    /// - github.com/owner/repo/issues/456 (issue)
+    ///
+    /// Example:
+    /// - Input: "/apple/swift/pull/12345"
+    /// - Output: ["github_owner": "apple", "github_repo": "swift", "github_pr_number": "12345"]
     private static func extractGitHubIDs(from path: String) -> [String: String] {
         var ids: [String: String] = [:]
         let components = path.split(separator: "/").map(String.init)
