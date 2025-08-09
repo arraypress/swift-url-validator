@@ -1,4 +1,4 @@
-# URLValidator
+# Swift URL Validator
 
 A comprehensive URL validation and classification library for Swift that intelligently detects platforms, media types, and validates URLs using native Apple APIs and UTType for maximum compatibility.
 
